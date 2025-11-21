@@ -1,12 +1,11 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 model Cat {
   id        Int      @id @default(autoincrement())
@@ -14,9 +13,8 @@ model Cat {
   age       Int
   needs     String?
   createdAt DateTime @default(now())
-
-  userId Int
-  user   User @relation(fields: [userId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model User {
@@ -28,20 +26,18 @@ model User {
   password  String
   createdAt DateTime  @default(now())
   role      String    @default("client")
-
-  services  Service[]
   cats      Cat[]
+  services  Service[]
 }
 
 model Service {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   petName     String
   serviceType String
   date        DateTime
   notes       String?
-  createdAt   DateTime  @default(now())
-  price       Float     @default(0)
-
-  userId Int
-  user   User @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  price       Float    @default(0)
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
 }
