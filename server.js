@@ -135,7 +135,7 @@ app.post("/services", async (req, res) => {
         serviceType,
         date: new Date(date),
         notes,
-        price: 0, // 🔥 Evita erro no Postgres
+        price: 0,
       },
     });
 
