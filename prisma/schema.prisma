@@ -7,14 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Cat {
-  id        Int      @id @default(autoincrement())
-  name      String
-  age       Int
-  needs     String?
-  createdAt DateTime @default(now())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+model Service {
+  id          Int      @id @default(autoincrement())
+  petName     String
+  serviceType String
+  date        DateTime
+  time        String
+  notes       String?
+  price       Float     @default(0)
+  createdAt   DateTime  @default(now())
+
+  userId  Int
+  adminId Int
+
+  user    User @relation("UserServices", fields: [userId], references: [id])
+  admin   User @relation("AdminServices", fields: [adminId], references: [id])
 }
 
 model User {
@@ -24,20 +31,20 @@ model User {
   phone     String
   birthday  DateTime
   password  String
+  role      String    @default("user")
   createdAt DateTime  @default(now())
-  role      String    @default("client")
-  cats      Cat[]
-  services  Service[]
+
+  cats       Cat[]
+  services   Service[] @relation("UserServices")
+  adminTasks Service[] @relation("AdminServices")
 }
 
-model Service {
-  id          Int      @id @default(autoincrement())
-  petName     String
-  serviceType String
-  date        DateTime
-  notes       String?
-  createdAt   DateTime @default(now())
-  price       Float    @default(0)
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
+model Cat {
+  id     Int    @id @default(autoincrement())
+  name   String
+  age    Int?
+  needs  String?
+  userId Int
+
+  user   User @relation(fields: [userId], references: [id])
 }
