@@ -11,7 +11,9 @@ const prisma = new PrismaClient();
 app.use(cors());
 app.use(express.json());
 
-// REGISTRO DE USUÁRIO
+/* =============================
+      REGISTRO DE USUÁRIO
+============================= */
 app.post("/register", async (req, res) => {
   const { name, email, phone, birthday, password, cats } = req.body;
 
@@ -39,7 +41,7 @@ app.post("/register", async (req, res) => {
             ? cats.map((cat) => ({
                 name: cat.name,
                 age: cat.age || 0,
-                needs: cat.needs ?? null, // 🔥 Ajustado para Postgres
+                needs: cat.needs ?? null,
               }))
             : [],
         },
@@ -57,7 +59,9 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// LOGIN
+/* =============================
+              LOGIN
+============================= */
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -89,7 +93,9 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// PERFIL DO USUÁRIO
+/* =============================
+        PERFIL DO USUÁRIO
+============================= */
 app.get("/me", async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Token ausente." });
@@ -120,38 +126,52 @@ app.get("/me", async (req, res) => {
   }
 });
 
-// Criar um novo serviço
+/* =============================
+      CRIAR NOVO SERVIÇO
+============================= */
 app.post("/services", async (req, res) => {
-  const { userId, petName, serviceType, date, notes } = req.body;
+  const { userId, adminId, petName, serviceType, date, time, notes, price } = req.body;
+
+  if (!userId || !adminId || !serviceType || !petName || !date || !time) {
+    return res.status(400).json({ error: "Campos obrigatórios faltando." });
+  }
 
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: "Usuário não encontrado." });
 
+    const admin = await prisma.user.findUnique({ where: { id: adminId } });
+    if (!admin) return res.status(404).json({ error: "Admin (cuidadora) não encontrada." });
+
     const service = await prisma.service.create({
       data: {
         userId,
+        adminId,
         petName,
         serviceType,
         date: new Date(date),
-        notes,
-        price: 0,
+        time,
+        notes: notes || "",
+        price: Number(price),
       },
     });
 
     res.status(201).json(service);
   } catch (err) {
-    console.error(err);
+    console.error("Erro ao criar serviço:", err);
     res.status(500).json({ error: "Erro ao criar serviço." });
   }
 });
 
-// Listar todos os serviços (admin)
+/* =============================
+      LISTAR TODOS (ADMIN)
+============================= */
 app.get("/services", async (req, res) => {
   try {
     const services = await prisma.service.findMany({
       include: {
         user: { select: { id: true, name: true, email: true, phone: true } },
+        admin: { select: { id: true, name: true, email: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -163,13 +183,16 @@ app.get("/services", async (req, res) => {
   }
 });
 
-// Listar serviços de um usuário (cliente)
-app.get("/services/:userId", async (req, res) => {
+/* =============================
+      LISTAR SERVIÇOS DO CLIENTE
+============================= */
+app.get("/services/user/:userId", async (req, res) => {
   const { userId } = req.params;
 
   try {
     const services = await prisma.service.findMany({
       where: { userId: Number(userId) },
+      include: { admin: true },
       orderBy: { createdAt: "desc" },
     });
 
@@ -180,7 +203,29 @@ app.get("/services/:userId", async (req, res) => {
   }
 });
 
-// Listar todos os usuários (apenas admin)
+/* =============================
+   LISTAR SERVIÇOS DA CUIDADORA
+============================= */
+app.get("/services/admin/:adminId", async (req, res) => {
+  const { adminId } = req.params;
+
+  try {
+    const services = await prisma.service.findMany({
+      where: { adminId: Number(adminId) },
+      include: { user: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json(services);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao buscar serviços da administradora." });
+  }
+});
+
+/* =============================
+      LISTAR TODOS OS USUÁRIOS
+============================= */
 app.get("/users", async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Token ausente." });
@@ -212,5 +257,7 @@ app.get("/users", async (req, res) => {
   }
 });
 
-// INICIAR SERVIDOR
+/* =============================
+        INICIAR SERVIDOR
+============================= */
 app.listen(3000, () => console.log("✅ API rodando na porta 3000"));
