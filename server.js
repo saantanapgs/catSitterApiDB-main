@@ -130,9 +130,9 @@ app.get("/me", async (req, res) => {
       CRIAR NOVO SERVIÇO
 ============================= */
 app.post("/services", async (req, res) => {
-  const { userId, adminId, petName, serviceType, date, time, notes, price } = req.body;
+  const { userId, petName, serviceType, date, notes, price } = req.body;
 
-  if (!userId || !adminId || !serviceType || !petName || !date || !time) {
+  if (!userId || !serviceType || !petName || !date) {
     return res.status(400).json({ error: "Campos obrigatórios faltando." });
   }
 
