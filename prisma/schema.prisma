@@ -16,7 +16,8 @@ model Service {
   notes       String?
   price       Float     @default(0)
   createdAt   DateTime  @default(now())
-
+  status String @default("agendado")
+  
   userId  Int
   adminId Int
 
