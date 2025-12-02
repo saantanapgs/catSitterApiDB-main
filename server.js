@@ -223,6 +223,26 @@ app.get("/services/admin/:adminId", async (req, res) => {
   }
 });
 
+
+/* =============================
+      MARCAR SERVIÇO COMO CONCLUÍDO
+============================= */
+app.patch("/services/:id/concluir", async (req, res) => {
+    try {
+        const serviceId = Number(req.params.id);
+
+        const updated = await prisma.service.update({
+            where: { id: serviceId },
+            data: { status: "concluido" }
+        });
+
+        res.json(updated);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Erro ao concluir serviço." });
+    }
+});
+
 /* =============================
       LISTAR TODOS OS USUÁRIOS
 ============================= */
