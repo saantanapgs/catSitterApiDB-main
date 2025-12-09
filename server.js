@@ -12,6 +12,23 @@ app.use(cors());
 app.use(express.json());
 
 /* =============================
+      MIDDLEWARE DE AUTENTICAÇÃO
+============================= */
+function auth(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header) return res.status(401).json({ error: "Token ausente." });
+
+  const token = header.split(" ")[1];
+
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Token inválido ou expirado." });
+  }
+}
+
+/* =============================
       REGISTRO DE USUÁRIO
 ============================= */
 app.post("/register", async (req, res) => {
@@ -96,16 +113,10 @@ app.post("/login", async (req, res) => {
 /* =============================
         PERFIL DO USUÁRIO
 ============================= */
-app.get("/me", async (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: "Token ausente." });
-
-  const token = authHeader.split(" ")[1];
+app.get("/me", auth, async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: req.user.userId },
       select: {
         id: true,
         name: true,
@@ -125,6 +136,73 @@ app.get("/me", async (req, res) => {
     res.status(401).json({ error: "Token inválido ou expirado." });
   }
 });
+
+
+/* =============================
+    1. BUSCAR PERFIL DO ADMIN
+============================= */
+app.get("/admin/me", auth, async (req, res) => {
+  try {
+    const admin = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { id: true, name: true, email: true, phone: true, role: true },
+    });
+
+    if (!admin) return res.status(404).json({ error: "Admin não encontrado." });
+
+    res.json(admin);
+  } catch {
+    res.status(500).json({ error: "Erro ao buscar dados do admin." });
+  }
+});
+
+/* =============================
+    2. ATUALIZAR DADOS BÁSICOS
+============================= */
+app.put("/admin/update", auth, async (req, res) => {
+  const { name, email, phone } = req.body;
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: req.user.userId },
+      data: { name, email, phone },
+    });
+
+    res.json({ message: "Dados atualizados!", updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao atualizar dados." });
+  }
+});
+
+/* =============================
+    3. ALTERAR SENHA DO ADMIN
+============================= */
+app.put("/admin/change-password", auth, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  try {
+    const admin = await prisma.user.findUnique({ where: { id: req.user.userId } });
+
+    if (!admin) return res.status(404).json({ error: "Admin não encontrado." });
+
+    const valid = await bcrypt.compare(oldPassword, admin.password);
+    if (!valid) return res.status(400).json({ error: "Senha atual incorreta." });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: admin.id },
+      data: { password: hashed },
+    });
+
+    res.json({ message: "Senha alterada com sucesso!" });
+  } catch (err) {
+    console.error("Erro ao alterar senha:", err);
+    res.status(500).json({ error: "Erro ao alterar senha." });
+  }
+});
+
 
 /* =============================
       CRIAR NOVO SERVIÇO
@@ -223,38 +301,31 @@ app.get("/services/admin/:adminId", async (req, res) => {
   }
 });
 
-
 /* =============================
       MARCAR SERVIÇO COMO CONCLUÍDO
 ============================= */
 app.patch("/services/:id/concluir", async (req, res) => {
-    try {
-        const serviceId = Number(req.params.id);
+  try {
+    const serviceId = Number(req.params.id);
 
-        const updated = await prisma.service.update({
-            where: { id: serviceId },
-            data: { status: "concluido" }
-        });
+    const updated = await prisma.service.update({
+      where: { id: serviceId },
+      data: { status: "concluido" }
+    });
 
-        res.json(updated);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Erro ao concluir serviço." });
-    }
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao concluir serviço." });
+  }
 });
 
 /* =============================
       LISTAR TODOS OS USUÁRIOS
 ============================= */
-app.get("/users", async (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: "Token ausente." });
-
-  const token = authHeader.split(" ")[1];
+app.get("/users", auth, async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    if (decoded.role !== "admin") {
+    if (req.user.role !== "admin") {
       return res.status(403).json({ error: "Apenas administradores podem acessar." });
     }
 
