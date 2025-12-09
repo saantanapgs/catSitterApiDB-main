@@ -205,6 +205,58 @@ app.put("/admin/change-password", auth, async (req, res) => {
 
 
 /* =============================
+      ALTERAR SENHA DO USUÁRIO
+============================= */
+app.put("/user/change-password", auth, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId }
+    });
+
+    if (!user) return res.status(404).json({ error: "Usuário não encontrado." });
+
+    const valid = await bcrypt.compare(oldPassword, user.password);
+    if (!valid)
+      return res.status(400).json({ error: "Senha atual incorreta." });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashed },
+    });
+
+    res.json({ message: "Senha alterada com sucesso!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao alterar senha." });
+  }
+});
+
+
+/* =============================
+      ATUALIZAR DADOS DO USUÁRIO
+============================= */
+app.put("/user/update", auth, async (req, res) => {
+  const { name, email, phone } = req.body;
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: req.user.userId },
+      data: { name, email, phone },
+    });
+
+    res.json({ message: "Dados do usuário atualizados!", updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao atualizar dados do usuário." });
+  }
+});
+
+
+/* =============================
       CRIAR NOVO SERVIÇO
 ============================= */
 app.post("/services", async (req, res) => {
