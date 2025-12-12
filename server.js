@@ -257,7 +257,7 @@ app.put("/user/update", auth, async (req, res) => {
 
 
 /* =============================
-      CRIAR NOVO SERVIÇO
+      CRIAR NOVO SERVIÇO 
 ============================= */
 app.post("/services", async (req, res) => {
   const { userId, adminId, petName, serviceType, date, time, notes, price } = req.body;
@@ -267,6 +267,18 @@ app.post("/services", async (req, res) => {
   }
 
   try {
+    const sameDateTime = await prisma.service.findFirst({
+      where: {
+        date: new Date(date),
+        time: time
+      }
+    });
+    if (sameDateTime) {
+      return res.status(409).json({
+        error: "Já existe um serviço marcado neste dia e horário. Escolha outro horário."
+      });
+    }
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: "Usuário não encontrado." });
 
@@ -287,11 +299,13 @@ app.post("/services", async (req, res) => {
     });
 
     res.status(201).json(service);
+
   } catch (err) {
     console.error("Erro ao criar serviço:", err);
     res.status(500).json({ error: "Erro ao criar serviço." });
   }
 });
+
 
 /* =============================
       LISTAR TODOS (ADMIN)
