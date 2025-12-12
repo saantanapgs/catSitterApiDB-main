@@ -267,15 +267,28 @@ app.post("/services", async (req, res) => {
   }
 
   try {
+    const serviceDate = new Date(date);
+
+    const startOfDay = new Date(serviceDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(serviceDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
     const sameDateTime = await prisma.service.findFirst({
       where: {
-        date: new Date(date),
-        time: time
-      }
+        adminId: adminId,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+        time: time,
+      },
     });
+
     if (sameDateTime) {
       return res.status(409).json({
-        error: "Já existe um serviço marcado neste dia e horário. Escolha outro horário."
+        error: "Já existe um serviço marcado para este administrador neste dia e horário. Escolha outro horário."
       });
     }
 
@@ -291,7 +304,7 @@ app.post("/services", async (req, res) => {
         adminId,
         petName,
         serviceType,
-        date: new Date(date),
+        date: serviceDate,
         time,
         notes: notes || "",
         price: Number(price) || 0,
@@ -305,6 +318,7 @@ app.post("/services", async (req, res) => {
     res.status(500).json({ error: "Erro ao criar serviço." });
   }
 });
+
 
 
 /* =============================
