@@ -257,7 +257,7 @@ app.put("/user/update", auth, async (req, res) => {
 
 
 /* =============================
-      CRIAR NOVO SERVIÇO 
+      CRIAR NOVO SERVIÇO (RESTRICAO DE DATE/TIME)
 ============================= */
 app.post("/services", async (req, res) => {
   const { userId, adminId, petName, serviceType, date, time, notes, price } = req.body;
